@@ -1,0 +1,31 @@
+# SCSAP default pipeline configuration.
+
+raw_data_dir: data/raw
+processed_data_dir: data/processed
+
+bond_cutoff: 60.0
+
+# psi_k computed for every k in [k_min, k_max).
+k_min: 2
+k_max: 20
+
+num_permutations: 2000
+random_state: 42
+
+dataset:
+  name: CP_PDAC
+  cell_types: [APC, CTL, Epi, THelper, Treg]
+  cell_type_encoding:
+    APC: 0
+    CTL: 1
+    Epi: 2
+    THelper: 3
+    Treg: 4
+  cell_colors:
+    APC: "tab:orange"
+    CTL: "tab:blue"
+    Epi: "tab:green"
+    THelper: "tab:red"
+    Treg: "tab:purple"
+  plot_xlim: [0.0, 1400.0]
+  plot_ylim: [0.0, 1050.0]

@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Data and outputs
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+results/
+*.csv
+*.parquet
+*.gsd
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# Reference implementation — not for distribution
+old_src/
+
+# Claude Code
+CLAUDE.md
+.claude/
+memory/
