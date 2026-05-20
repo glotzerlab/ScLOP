@@ -3,11 +3,14 @@
 raw_data_dir: data/raw
 processed_data_dir: data/processed
 
-bond_cutoff: 60.0
+# Neighbor query radii. Either a list (sweep) or a single scalar via
+# 'bond_cutoff: 60.0'. Feature columns are suffixed _r<cutoff> when more
+# than one radius is given.
+bond_cutoffs: [60.0]
 
 # psi_k computed for every k in [k_min, k_max).
 k_min: 2
-k_max: 20
+k_max: 11
 
 num_permutations: 2000
 random_state: 42
