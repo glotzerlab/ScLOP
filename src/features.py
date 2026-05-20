@@ -96,19 +96,22 @@ def compute_local_density(
     df: pd.DataFrame,
     cell_types: list[str],
     cutoff: float,
+    include_neighbor_counts: bool = True,
 ) -> pd.DataFrame:
-    """Compute per-cell local density and per-cell-type neighbor counts.
+    """Compute per-cell local density, optionally with neighbor counts.
 
-    Adds columns ``local_density``, ``num_neighbors``, and
-    ``num_<celltype>_neighbors`` for each entry in ``cell_types``.
+    Always adds ``local_density``. When ``include_neighbor_counts`` is True
+    (the default), also adds ``num_neighbors`` and ``num_<celltype>_neighbors``
+    for each entry in ``cell_types``.
     """
     df = df.reset_index(drop=True).copy()
 
     if len(df) == 0:
         df["local_density"] = np.nan
-        df["num_neighbors"] = np.nan
-        for ct in cell_types:
-            df[f"num_{ct}_neighbors"] = 0
+        if include_neighbor_counts:
+            df["num_neighbors"] = np.nan
+            for ct in cell_types:
+                df[f"num_{ct}_neighbors"] = 0
         return df
 
     box, points = build_system(df)
@@ -117,6 +120,10 @@ def compute_local_density(
     ld = freud.density.LocalDensity(r_max=cutoff, diameter=0.0)
     ld.compute(system=(box, points), neighbors=nlist)
     df["local_density"] = ld.density
+
+    if not include_neighbor_counts:
+        return df
+
     df["num_neighbors"] = ld.num_neighbors
 
     neighbor_types = df["cell_type"].values[nlist.point_indices]
