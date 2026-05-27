@@ -26,7 +26,7 @@ import pandas as pd
 import yaml
 
 from .features import compute_katic_order, compute_local_density
-from .ml import build_feature_matrix, cross_validate
+from .ml import build_feature_matrix, cross_validate_random_forest
 from .preprocessing import load_dataset, save_processed
 from .stats import adjust_pvalues, ks_test_per_feature
 
@@ -151,7 +151,7 @@ def run(config: dict, output_dir: Path) -> None:
     print("[4/4] cross-validated random forest")
     X, y = build_feature_matrix(image_summary, label_column="pathology",
                                  feature_columns=feat_cols)
-    result = cross_validate(
+    result = cross_validate_random_forest(
         X, y,
         n_splits=5,
         random_state=int(config["random_state"]),
