@@ -28,7 +28,7 @@ import yaml
 from .features import compute_katic_order, compute_local_density
 from .ml import build_feature_matrix, cross_validate
 from .preprocessing import load_dataset, save_processed
-from .stats import adjust_pvalues, run_battery
+from .stats import adjust_pvalues, ks_test_per_feature
 
 
 IDENTIFIER_COLS = {
@@ -136,17 +136,16 @@ def run(config: dict, output_dir: Path) -> None:
           f"{len(image_summary)} per-image rows")
 
     # ── Stage 3: stats ────────────────────────────────────────────────────────
-    print("[3/4] running statistical tests (pathology 1 vs 2)")
-    stats_df = run_battery(
+    print("[3/4] running KS tests (pathology 1 vs 2)")
+    stats_df = ks_test_per_feature(
         image_summary,
         feature_columns=feat_cols,
         group_column="pathology",
-        tests=("ks", "t", "mannwhitney"),
     )
     stats_df = adjust_pvalues(stats_df)
     stats_df.to_csv(output_dir / "stats.csv", index=False)
     sig = (stats_df["p_value_bh"] < 0.05).sum()
-    print(f"      {sig} feature×test pairs significant at BH q<0.05")
+    print(f"      {sig} features significant at BH q<0.05")
 
     # ── Stage 4: ML ───────────────────────────────────────────────────────────
     print("[4/4] cross-validated random forest")
