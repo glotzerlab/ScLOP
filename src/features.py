@@ -28,7 +28,7 @@ def _radius_nlist(box, points, cutoff: float):
 def _katic_nlists(box, points, cutoff: float, k: int):
     """Return the three neighbor-list variants used for psi_k.
 
-    - ``nlist_all``: every neighbor within ``cutoff``.
+    - ``nlist_all``: every neighbor within ``cutoff`` <- used in paper.
     - ``nlist_ngek``: drop query cells with fewer than ``k`` neighbors.
     - ``nlist_nek``: keep only the ``k`` nearest neighbors per query cell.
 
