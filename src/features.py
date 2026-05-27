@@ -1,7 +1,7 @@
 """Stage 2: local density and k-atic bond-orientational order (psi_k).
 
 All computations use freud neighbor-list queries on the per-image system
-returned by :func:`preprocessing.build_system`.  The bond radius (``cutoff``)
+returned by :func:`preprocessing.build_freud_system`.  The bond radius (``cutoff``)
 is a required parameter on every public function so callers can sweep it.
 """
 
@@ -12,7 +12,7 @@ import freud
 import numpy as np
 import pandas as pd
 
-from .preprocessing import build_system
+from .preprocessing import build_freud_system
 
 
 # ── neighbor-list helpers ─────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ def compute_local_density(
                 df[f"num_{ct}_neighbors"] = 0
         return df
 
-    box, points = build_system(df)
+    box, points = build_freud_system(df)
     nlist = _radius_nlist(box, points, cutoff)
 
     ld = freud.density.LocalDensity(r_max=cutoff, diameter=0.0)
@@ -146,7 +146,7 @@ def compute_local_density(
     return df
 
 
-def compute_density_combos(
+def compute_local_density_by_celltype_combo(
     df: pd.DataFrame,
     cell_types: list[str],
     cutoff: float,
@@ -177,7 +177,7 @@ def compute_density_combos(
         if n_comb == 0:
             continue
 
-        box, points = build_system(sub)
+        box, points = build_freud_system(sub)
         ld = freud.density.LocalDensity(r_max=cutoff, diameter=0.0)
         ld.compute(system=(box, points))
         density = np.asarray(ld.density)
@@ -221,7 +221,7 @@ def compute_katic_order(
             df[f"psi_{k}_nek"] = np.nan
         return df
 
-    box, points = build_system(df)
+    box, points = build_freud_system(df)
     for k in k_values:
         nlist_all, nlist_ngek, nlist_nek = _katic_nlists(box, points, cutoff, k)
         df[f"psi_{k}_all"] = _psi_k(box, points, nlist_all, k)
@@ -231,7 +231,7 @@ def compute_katic_order(
     return df
 
 
-def compute_katic_combos(
+def compute_katic_order_by_celltype_combo(
     df: pd.DataFrame,
     cell_types: list[str],
     cutoff: float,
@@ -252,7 +252,7 @@ def compute_katic_combos(
         if len(sub) == 0:
             continue
 
-        box, points = build_system(sub)
+        box, points = build_freud_system(sub)
         idxs = sub.index
         for k in k_values:
             nlist_all, nlist_ngek, nlist_nek = _katic_nlists(box, points, cutoff, k)

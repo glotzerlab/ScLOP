@@ -67,7 +67,7 @@ def _feature_columns(df: pd.DataFrame) -> list[str]:
     return [c for c in df.columns if c not in IDENTIFIER_COLS]
 
 
-def _features_at_radius(
+def _compute_features_at_one_cutoff(
     df: pd.DataFrame,
     cell_types: list[str],
     cutoff: float,
@@ -87,7 +87,7 @@ def _features_at_radius(
     return out
 
 
-def run(config: dict, output_dir: Path) -> None:
+def run_pipeline(config: dict, output_dir: Path) -> None:
     """Execute all four stages in sequence, writing outputs to ``output_dir``."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -113,7 +113,7 @@ def run(config: dict, output_dir: Path) -> None:
         merged = None
         for cutoff in cutoffs:
             suffix = f"_r{cutoff:g}" if len(cutoffs) > 1 else ""
-            feats = _features_at_radius(
+            feats = _compute_features_at_one_cutoff(
                 df, cell_types, cutoff, k_values, include_counts, suffix,
             )
             if merged is None:
@@ -176,7 +176,7 @@ def main() -> None:
     with open(args.config) as f:
         config = yaml.safe_load(f)
 
-    run(config, args.output_dir)
+    run_pipeline(config, args.output_dir)
 
 
 if __name__ == "__main__":

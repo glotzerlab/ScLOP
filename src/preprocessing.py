@@ -17,7 +17,7 @@ import pandas as pd
 
 # ── cell-type handling ────────────────────────────────────────────────────────
 
-def get_cell_type_encoding(df: pd.DataFrame, type_col: str = "type") -> dict[str, int]:
+def build_cell_type_encoding(df: pd.DataFrame, type_col: str = "type") -> dict[str, int]:
     """Derive a stable string→integer mapping from all types in ``df``.
 
     NaN entries are converted to ``"undefined"`` before sorting,
@@ -41,7 +41,7 @@ def encode_cell_types(
 
 # ── cleaning ──────────────────────────────────────────────────────────────────
 
-def deduplicate(df: pd.DataFrame) -> pd.DataFrame:
+def drop_duplicate_positions(df: pd.DataFrame) -> pd.DataFrame:
     """Drop rows sharing identical (x, y) coordinates within an image."""
     return df.drop_duplicates(subset=["x", "y"]).reset_index(drop=True)
 
@@ -77,7 +77,7 @@ def load_dataset(
     # normalise cell-type strings (NaN → "undefined")
     raw["type"] = raw["type"].fillna("undefined").astype(str)
 
-    encoding = get_cell_type_encoding(raw)
+    encoding = build_cell_type_encoding(raw)
 
     images: dict[str, pd.DataFrame] = {}
     for image_id, group in raw.groupby("img"):
@@ -90,7 +90,7 @@ def load_dataset(
         df["image_id"] = image_id
         df["cell_id"] = np.arange(len(df))
 
-        df = deduplicate(df)
+        df = drop_duplicate_positions(df)
         df = encode_cell_types(df, encoding)
 
         if drop_undefined:
@@ -129,7 +129,7 @@ def load_image(
 BOX_SCALE = 1000  # makes the box non-periodic: no cell can be near a boundary
 
 
-def build_system(df: pd.DataFrame) -> tuple[freud.box.Box, np.ndarray]:
+def build_freud_system(df: pd.DataFrame) -> tuple[freud.box.Box, np.ndarray]:
     """Build a freud 2D simulation box and point array from a per-image dataframe.
 
     The box is scaled to 1000× the coordinate span so that freud treats it as
