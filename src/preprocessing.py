@@ -4,8 +4,20 @@ Reads a single CSV covering all images, splits by image, deduplicates
 overlapping positions, encodes cell types, and optionally writes
 per-image CSVs to a processed directory.
 
-Expected input CSV columns:
-    pathology, patient, img, X, Y, type_orig, type
+Expected input CSV columns (unified schema)
+-------------------------------------------
+
+    cell_id    — integer cell identifier (unique within the CSV)
+    x, y       — float cell-centre coordinates
+    cell_type  — string cell-type label (NaN → "undefined")
+    image_id   — string image identifier (rows are grouped by this)
+    pathology  — string disease/condition label
+    patient    — patient identifier (may be NaN if not available)
+
+Raw CSVs with study-specific column names (e.g. CRC's
+``pathology, patient, img, X, Y, type_orig, type`` or CP_PDAC's
+``cell_id, x, y, cell_type, cell_type_1hot, dataset, job_id``) must be
+converted to this schema first — see ``src/normalize_raw.py``.
 """
 
 from pathlib import Path
@@ -17,7 +29,7 @@ import pandas as pd
 
 # ── cell-type handling ────────────────────────────────────────────────────────
 
-def build_cell_type_encoding(df: pd.DataFrame, type_col: str = "type") -> dict[str, int]:
+def build_cell_type_encoding(df: pd.DataFrame, type_col: str = "cell_type") -> dict[str, int]:
     """Derive a stable string→integer mapping from all types in ``df``.
 
     NaN entries are converted to ``"undefined"`` before sorting,
@@ -60,7 +72,7 @@ def load_dataset(
     Parameters
     ----------
     csv_path :
-        Path to the raw CSV (e.g. ``data/raw/CRC_data_cleaned_corrected.csv``).
+        Path to a CSV in the unified schema (see module docstring).
     drop_undefined :
         If True, remove cells whose type resolved to ``"undefined"`` (i.e.
         originally NaN) before returning.
@@ -75,19 +87,13 @@ def load_dataset(
     raw = pd.read_csv(csv_path)
 
     # normalise cell-type strings (NaN → "undefined")
-    raw["type"] = raw["type"].fillna("undefined").astype(str)
+    raw["cell_type"] = raw["cell_type"].fillna("undefined").astype(str)
 
     encoding = build_cell_type_encoding(raw)
 
     images: dict[str, pd.DataFrame] = {}
-    for image_id, group in raw.groupby("img"):
-        df = (
-            group
-            .rename(columns={"X": "x", "Y": "y", "type": "cell_type"})
-            .drop(columns=["type_orig", "img"])
-            .reset_index(drop=True)
-        )
-        df["image_id"] = image_id
+    for image_id, group in raw.groupby("image_id"):
+        df = group.reset_index(drop=True)
         df["cell_id"] = np.arange(len(df))
 
         df = drop_duplicate_positions(df)

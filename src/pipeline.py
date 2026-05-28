@@ -127,8 +127,13 @@ def run_pipeline(config: dict, output_dir: Path) -> None:
     cells.to_csv(output_dir / "cells_features.csv", index=False)
 
     feat_cols = _feature_columns(cells)
+    # only group by patient when patient identifiers are actually present —
+    # CP_PDAC-style datasets have no patient column populated.
+    group_keys = ["image_id", "pathology"]
+    if cells["patient"].notna().any():
+        group_keys.append("patient")
     image_summary = (
-        cells.groupby(["image_id", "pathology", "patient"], as_index=False)[feat_cols]
+        cells.groupby(group_keys, as_index=False)[feat_cols]
         .mean()
     )
     image_summary.to_csv(output_dir / "image_summary.csv", index=False)

@@ -38,6 +38,9 @@ results/
 # Reference implementation — not for distribution
 old_src/
 
+# One-off raw-data normaliser — not part of the distributed pipeline
+src/normalize_raw.py
+
 # Claude Code
 CLAUDE.md
 .claude/
