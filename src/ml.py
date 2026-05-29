@@ -132,14 +132,13 @@ def classification_metrics(
         except ValueError:
             auroc = float("nan")
 
+    f1_kwargs = {"average": "binary", "pos_label": classes[-1]} if binary \
+                else {"average": "macro"}
     return {
         "auroc": auroc,
         "accuracy": float(accuracy_score(y_true, y_pred)),
         "balanced_accuracy": float(balanced_accuracy_score(y_true, y_pred)),
-        "f1": float(f1_score(
-            y_true, y_pred,
-            average="binary" if binary else "macro",
-        )),
+        "f1": float(f1_score(y_true, y_pred, **f1_kwargs)),
         "confusion_matrix": confusion_matrix(y_true, y_pred, labels=classes),
     }
 
@@ -208,12 +207,17 @@ def cross_validate_random_forest_with_ci(
 
     overall = {k: v for k, v in cv["overall"].items() if k != "confusion_matrix"}
 
+    pos_label = classes[-1] if binary else None
     metric_specs: list[tuple[str, Callable, bool]] = [
         ("accuracy", accuracy_score, False),
         ("balanced_accuracy", balanced_accuracy_score, False),
-        ("f1", lambda yt, yp: f1_score(yt, yp,
-                                       average="binary" if binary else "macro",
-                                       zero_division=0), False),
+        ("f1", (lambda yt, yp: f1_score(yt, yp,
+                                        average="binary", pos_label=pos_label,
+                                        zero_division=0))
+                if binary else
+                (lambda yt, yp: f1_score(yt, yp, average="macro",
+                                         zero_division=0)),
+         False),
     ]
     if binary:
         metric_specs.append(("auroc", roc_auc_score, True))
