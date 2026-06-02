@@ -11,6 +11,8 @@ Stages
    feature column, with BH and BY p-value correction.
 4. **Train a cross-validated random-forest classifier** that predicts
    pathology from the per-image feature summary.
+5. **Test psi/density independence** with HSIC over each pathology split,
+   with permutation p-values and a null Z-score.
 
 All intermediate and final tables are written to ``output_dir``.
 
@@ -26,6 +28,7 @@ import pandas as pd
 import yaml
 
 from .features import compute_katic_order, compute_local_density
+from .hsic import hsic_sweep
 from .ml import build_feature_matrix, cross_validate_random_forest
 from .preprocessing import load_dataset, save_processed
 from .stats import adjust_pvalues, ks_test_per_feature
@@ -88,13 +91,13 @@ def _compute_features_at_one_cutoff(
 
 
 def run_pipeline(config: dict, output_dir: Path) -> None:
-    """Execute all four stages in sequence, writing outputs to ``output_dir``."""
+    """Execute all five stages in sequence, writing outputs to ``output_dir``."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # ── Stage 1: preprocessing ────────────────────────────────────────────────
     raw_csv = _resolve_raw_csv(config)
-    print(f"[1/4] loading raw data from {raw_csv}")
+    print(f"[1/5] loading raw data from {raw_csv}")
     images, encoding = load_dataset(raw_csv, drop_undefined=False)
     save_processed(images, config["processed_data_dir"])
     print(f"      loaded {len(images)} images, {len(encoding)} cell types")
@@ -104,7 +107,7 @@ def run_pipeline(config: dict, output_dir: Path) -> None:
     k_values = list(range(int(config["k_min"]), int(config["k_max"])))
     cell_types = sorted(encoding)
     include_counts = bool(config.get("include_neighbor_counts", True))
-    print(f"[2/4] computing features for {len(images)} images "
+    print(f"[2/5] computing features for {len(images)} images "
           f"(cutoffs={cutoffs}, k={k_values[0]}..{k_values[-1]}, "
           f"neighbor_counts={include_counts})")
 
@@ -141,7 +144,7 @@ def run_pipeline(config: dict, output_dir: Path) -> None:
           f"{len(image_summary)} per-image rows")
 
     # ── Stage 3: stats ────────────────────────────────────────────────────────
-    print("[3/4] running KS tests (pathology 1 vs 2)")
+    print("[3/5] running KS tests (pathology 1 vs 2)")
     stats_df = ks_test_per_feature(
         image_summary,
         feature_columns=feat_cols,
@@ -153,7 +156,7 @@ def run_pipeline(config: dict, output_dir: Path) -> None:
     print(f"      {sig} features significant at BH q<0.05")
 
     # ── Stage 4: ML ───────────────────────────────────────────────────────────
-    print("[4/4] cross-validated random forest")
+    print("[4/5] cross-validated random forest")
     X, y = build_feature_matrix(image_summary, label_column="pathology",
                                  feature_columns=feat_cols)
     result = cross_validate_random_forest(
@@ -169,6 +172,24 @@ def run_pipeline(config: dict, output_dir: Path) -> None:
     pd.Series(overall).to_csv(output_dir / "ml_overall.csv", header=["value"])
     print(f"      overall AUROC={overall['auroc']:.3f}, "
           f"balanced accuracy={overall['balanced_accuracy']:.3f}")
+
+    # ── Stage 5: HSIC (psi/density independence) ──────────────────────────────
+    n_perm = int(config.get("num_permutations", 2000))
+    print(f"[5/5] HSIC psi/density independence test "
+          f"(splits=pathology, n_permutations={n_perm})")
+    # When a single cutoff is used the feature columns carry no _r suffix, so
+    # sweep over all psi/density columns; with multiple cutoffs filter per radius.
+    hsic_cutoffs = cutoffs if len(cutoffs) > 1 else None
+    hsic_df = hsic_sweep(
+        image_summary,
+        splits_by="pathology",
+        cutoffs=hsic_cutoffs,
+        n_permutations=n_perm,
+        random_state=int(config["random_state"]),
+    )
+    hsic_df.to_csv(output_dir / "hsic.csv", index=False)
+    print(f"      wrote {len(hsic_df)} (split x cutoff) rows")
+
     print(f"done. results in {output_dir}/")
 
 
