@@ -6,8 +6,25 @@ statistics and machine learning.
 
 ## Dependencies
 
+Dependencies are pinned in `conda-lock.yml` (a multi-platform lock for
+linux-64, osx-64, and osx-arm64, generated from `environment.yml` with
+[conda-lock](https://github.com/conda/conda-lock)). Create the environment
+with an exact, reproducible install:
+
 ```bash
-pip install -r requirements.txt
+conda-lock install --name SCSAPreduced conda-lock.yml
+```
+
+This works with conda, mamba, or micromamba as the backend. If you don't have
+conda-lock, install it with `pip install conda-lock` or
+`micromamba install -c conda-forge conda-lock`.
+
+To resolve fresh (unpinned) instead of using the lock, or after editing
+`environment.yml`:
+
+```bash
+micromamba env create -f environment.yml   # fresh solve from the spec
+conda-lock lock -f environment.yml -p linux-64 -p osx-64 -p osx-arm64  # regenerate the lock
 ```
 
 ## Data
