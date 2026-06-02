@@ -41,8 +41,22 @@ def cross_validate_random_forest(
     y: np.ndarray,
     n_splits: int = 5,
     random_state: int = 42,
+    n_estimators: int = 500,
+    select_top_k: int | None = None,
 ) -> dict:
     """Stratified k-fold CV with a random-forest classifier.
+
+    Within every training fold, three steps are repeated from scratch:
+    (i) NaN imputation with train-fold column means; (ii) ranking all
+    predictors by impurity importance from an ``n_estimators``-tree forest;
+    and, when ``select_top_k`` is set, (iii) retaining the ``select_top_k``
+    highest-ranked variables and fitting a second forest with the same
+    hyper-parameters on that reduced set. The held-out fold is scored with the
+    second forest (or the ranking forest when ``select_top_k`` is None).
+
+    Feature importances are taken from the variable-ranking stage (the
+    full-predictor forest) and averaged across folds, giving a stable measure
+    over every predictor while keeping selection strictly inside each fold.
 
     Returns out-of-fold predictions, per-fold metrics (AUROC, accuracy,
     balanced accuracy, F1), and averaged impurity-based feature importances.
@@ -67,11 +81,29 @@ def cross_validate_random_forest(
         X_train = X_train.fillna(col_means).fillna(0.0)
         X_test = X_test.fillna(col_means).fillna(0.0)
 
-        clf = RandomForestClassifier(random_state=random_state, n_jobs=-1)
-        clf.fit(X_train.to_numpy(), y[train_idx])
+        # (ii) rank all predictors with a full-feature forest.
+        ranker = RandomForestClassifier(
+            n_estimators=n_estimators, random_state=random_state, n_jobs=-1,
+        )
+        ranker.fit(X_train.to_numpy(), y[train_idx])
+        per_fold_importances.append(ranker.feature_importances_)
 
-        pred = clf.predict(X_test.to_numpy())
-        proba = clf.predict_proba(X_test.to_numpy())
+        # (iii) retain the top-k predictors and refit a second forest; with no
+        # selection (or fewer than k features) the ranking forest is the model.
+        if select_top_k is not None and select_top_k < X_train.shape[1]:
+            top_idx = np.argsort(ranker.feature_importances_)[::-1][:select_top_k]
+            top_cols = X_train.columns[top_idx]
+            clf = RandomForestClassifier(
+                n_estimators=n_estimators, random_state=random_state, n_jobs=-1,
+            )
+            clf.fit(X_train[top_cols].to_numpy(), y[train_idx])
+            X_test_eval = X_test[top_cols].to_numpy()
+        else:
+            clf = ranker
+            X_test_eval = X_test.to_numpy()
+
+        pred = clf.predict(X_test_eval)
+        proba = clf.predict_proba(X_test_eval)
 
         oof_pred[test_idx] = pred
         # Align proba columns to global class order.
@@ -85,7 +117,6 @@ def cross_validate_random_forest(
             **classification_metrics(y[test_idx], pred,
                        y_proba=proba[:, 1] if len(clf.classes_) == 2 else proba),
         })
-        per_fold_importances.append(clf.feature_importances_)
 
     imp_matrix = np.vstack(per_fold_importances)
     feature_importances = pd.Series(
@@ -190,6 +221,8 @@ def cross_validate_random_forest_with_ci(
     random_state: int = 42,
     n_bootstraps: int = 1000,
     alpha: float = 0.05,
+    n_estimators: int = 500,
+    select_top_k: int | None = None,
 ) -> dict:
     """One-call CV + bootstrap CIs.
 
@@ -197,8 +230,15 @@ def cross_validate_random_forest_with_ci(
     pooled out-of-fold predictions for accuracy, balanced accuracy, F1, and
     (binary only) AUROC. Returns a flat dict suitable for writing to a single
     CSV row, alongside the full ``cross_validate_random_forest`` result.
+
+    ``n_estimators`` and ``select_top_k`` are forwarded to
+    :func:`cross_validate_random_forest` — pass ``select_top_k=20`` to run the
+    nested per-fold top-20 selection described in the paper.
     """
-    cv = cross_validate_random_forest(X, y, n_splits=n_splits, random_state=random_state)
+    cv = cross_validate_random_forest(
+        X, y, n_splits=n_splits, random_state=random_state,
+        n_estimators=n_estimators, select_top_k=select_top_k,
+    )
 
     y_pred = cv["oof_pred"]
     classes = cv["classes"]
@@ -341,6 +381,8 @@ def cross_validate_feature_groups(
     random_state: int = 42,
     n_bootstraps: int = 1000,
     alpha: float = 0.05,
+    n_estimators: int = 500,
+    select_top_k: int | None = None,
 ) -> tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
     """Run :func:`cross_validate_random_forest_with_ci` on each named feature subset.
 
@@ -348,6 +390,8 @@ def cross_validate_feature_groups(
       * ``summary_df`` — one row per group with metrics + bootstrap CIs.
       * ``importances_by_group`` — ``group -> feature_importances_table``
         (mean + std impurity importance per feature) from each CV run.
+
+    ``n_estimators`` and ``select_top_k`` are forwarded to each CV run.
     """
     rows: list[dict] = []
     importances: dict[str, pd.DataFrame] = {}
@@ -362,6 +406,7 @@ def cross_validate_feature_groups(
             X, y,
             n_splits=n_splits, random_state=random_state,
             n_bootstraps=n_bootstraps, alpha=alpha,
+            n_estimators=n_estimators, select_top_k=select_top_k,
         )
         rows.append({"group": name, "n_features": X.shape[1], **out["summary"]})
         importances[name] = out["cv"]["feature_importances_table"]
