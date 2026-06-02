@@ -1,0 +1,32 @@
+# Demo pipeline configuration — runs on the synthetic dataset.
+#
+# Generate the data first, then run the pipeline against this config:
+#     python -m src.simulate_data data/raw/simulated_data.csv
+#     python -m src.pipeline --config configs/demo.yaml --output-dir results/demo
+#
+# 'raw_csv' is set explicitly so the synthetic file is used even when real
+# study CSVs are also present in data/raw/.
+
+raw_csv: data/raw/simulated_data.csv
+processed_data_dir: data/processed_demo
+
+# Neighbor query radius (single value -> feature columns carry no _r suffix).
+bond_cutoffs: [60.0]
+
+# psi_k computed for every k in [k_min, k_max).
+k_min: 2
+k_max: 11
+
+num_permutations: 2000
+random_state: 42
+
+dataset:
+  name: simulated
+  cell_types: [Tumor, CD4_T, CD8_T, Macrophage]
+  cell_colors:
+    Tumor: "tab:gray"
+    CD4_T: "tab:red"
+    CD8_T: "tab:blue"
+    Macrophage: "tab:green"
+  plot_xlim: [0.0, 1400.0]
+  plot_ylim: [0.0, 1050.0]
