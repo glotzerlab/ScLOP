@@ -86,3 +86,9 @@ from src.hsic import hsic_test, hsic_sweep
 
 Edit `configs/default.yaml` to set the dataset path, bond cutoff, k-range,
 and cell-type definitions.
+
+## License
+
+Copyright The Regents of the University of Michigan.
+
+Released under the BSD 3-Clause License — see [LICENSE](LICENSE).
