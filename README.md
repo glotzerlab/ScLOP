@@ -1,4 +1,4 @@
-# SCSAP — Single-Cell Spatial Analysis Pipeline
+# MatBio - Analysis Pipeline
 
 Code accompanying [paper citation]. Analyzes the spatial organization of cells
 in tissue images to distinguish between tissue conditions using spatial
