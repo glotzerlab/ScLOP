@@ -1,4 +1,4 @@
-# MatBio - Analysis Pipeline
+# ScLOP - Single-cell Local Order Parameters
 
 Code accompanying [paper citation]. Analyzes the spatial organization of cells
 in tissue images to distinguish between tissue conditions using spatial
