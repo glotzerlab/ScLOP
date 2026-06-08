@@ -6,26 +6,25 @@ statistics and machine learning.
 
 ## Dependencies
 
-Dependencies are pinned in `conda-lock.yml` (a multi-platform lock for
-linux-64, osx-64, and osx-arm64, generated from `environment.yml` with
-[conda-lock](https://github.com/conda/conda-lock)). Create the environment
-with an exact, reproducible install:
+Dependencies are managed with [pixi](https://pixi.sh). The spec lives in
+`pixi.toml` and is pinned for linux-64, osx-64, osx-arm64, and win-64 in
+`pixi.lock`.
+Install pixi (`curl -fsSL https://pixi.sh/install.sh | bash`), then create the
+environment with an exact, reproducible install:
 
 ```bash
-conda-lock install --name SCSAPreduced conda-lock.yml
+pixi install
 ```
 
-This works with conda, mamba, or micromamba as the backend. If you don't have
-conda-lock, install it with `pip install conda-lock` or
-`micromamba install -c conda-forge conda-lock`.
-
-To resolve fresh (unpinned) instead of using the lock, or after editing
-`environment.yml`:
+Run commands inside the environment with `pixi run`, or open a shell in it:
 
 ```bash
-micromamba env create -f environment.yml   # fresh solve from the spec
-conda-lock lock -f environment.yml -p linux-64 -p osx-64 -p osx-arm64  # regenerate the lock
+pixi run python -m src.pipeline --config configs/default.yaml --output-dir results/
+pixi shell   # activate the environment interactively
 ```
+
+After editing `pixi.toml`, refresh the lock with `pixi install` (it re-solves
+and updates `pixi.lock` automatically).
 
 ## Data
 

@@ -16,6 +16,9 @@ htmlcov/
 venv/
 env/
 
+# pixi
+.pixi/
+
 # Editors
 .vscode/
 .idea/

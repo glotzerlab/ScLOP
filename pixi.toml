@@ -1,0 +1,15 @@
+[workspace]
+name = "SCSAPreduced"
+description = "Five-file analysis pipeline accompanying a tissue spatial analysis paper."
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
+
+[dependencies]
+python = "3.11.*"
+numpy = "*"
+pandas = "*"
+scipy = "*"
+scikit-learn = "*"
+freud = "*"
+matplotlib = "*"
+pyyaml = "*"
